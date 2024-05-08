@@ -23,3 +23,5 @@ class Class:
     def __init__(self, grade, days):
         self.grade = grade
         self.days = days
+
+
