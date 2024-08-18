@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
 using ILOG.Concert;
 using ILOG.CPLEX;
 
@@ -303,141 +299,19 @@ static class Program
                     penaltyVars.Add(penaltyVar);
 
                     // Add the constraint that forces the penalty if the subject is taught more than once in a day
-                    cplex.AddLe(expr, 1 + penaltyVar); // If expr is greater than 1, penaltyVar will be 1
-                    cplex.AddGe(penaltyVar, expr - 1); // Ensure penaltyVar is 0 if expr is less than or equal to 1
+                    cplex.AddLe(expr, cplex.Sum(1.0, penaltyVar)); // If expr is greater than 1, penaltyVar will be 1
+                    cplex.AddGe(penaltyVar, cplex.Diff(expr, 1.0)); // Ensure penaltyVar is 0 if expr is less than or equal to 1
                 }
             }
         }
     }
+
+
     // Add penalties to the objective function with their weights
     foreach (var penaltyVar in penaltyVars)
     {
         objectiveExpr.AddTerm(W[1], penaltyVar); // Use the appropriate weight for each penalty term
     }
-    
-    
-    // // 3. Penalty for having two periods of s in one day
-    // ILinearNumExpr Z3_t_s = cplex.LinearNumExpr();
-    // foreach (var t in teachers)
-    // {
-    //     foreach (var s in subjects)
-    //     {
-    //         foreach (var d in days)
-    //         {
-    //             foreach (var c in classes)
-    //             {
-    //                 ILinearNumExpr Lc_t_s_d = cplex.LinearNumExpr();
-    //                 foreach (var p in d.Hours)
-    //                 {
-    //                     Lc_t_s_d.AddTerm(1.0, Xc_t_s_p_d[classes.IndexOf(c), teachers.IndexOf(t), subjects.IndexOf(s), d.Hours.IndexOf(p), days.IndexOf(d)]);
-    //                 }
-    //                 Z3_t_s.Add(Lc_t_s_d); // Accumulate terms for the day
-    //             }
-    //         }
-    //     }
-    // }
-    // IIntVar penaltyVar3 = cplex.BoolVar(); // Create penalty variable
-    // cplex.AddEq(penaltyVar3, Z3_t_s);      // Link penalty variable to Z3_t_s
-    // Zt_s.AddTerm(W[2], penaltyVar3);
-    //
-    // // 4. Normalize a schedule
-    // ILinearNumExpr Z4_t_s = cplex.LinearNumExpr();
-    // foreach (var t in teachers)
-    // {
-    //     foreach (var s in subjects)
-    //     {
-    //         foreach (var d in days)
-    //         {
-    //             foreach (var c in classes)
-    //             {
-    //                 ILinearNumExpr Lc_t_s_d = cplex.LinearNumExpr();
-    //                 foreach (var p in d.Hours)
-    //                 {
-    //                     Lc_t_s_d.AddTerm(1.0, Xc_t_s_p_d[classes.IndexOf(c), teachers.IndexOf(t), subjects.IndexOf(s), d.Hours.IndexOf(p), days.IndexOf(d)]);
-    //                 }
-    //                 double normalized = (1.0 / dayCount) * c.TotalPeriods;
-    //             
-    //                 IIntVar penaltyVar = cplex.BoolVar();
-    //                 ILinearNumExpr diffExpr = cplex.LinearNumExpr();
-    //                 diffExpr.Add(Lc_t_s_d);
-    //                 diffExpr.AddTerm(-1.0 * normalized, Yc_t_s[classes.IndexOf(c), teachers.IndexOf(t), subjects.IndexOf(s)]);
-    //             
-    //                 // Adjusting the expression to use a linear expression
-    //                 ILinearNumExpr diffExprWithPenalty = cplex.LinearNumExpr();
-    //                 diffExprWithPenalty.AddTerm(-1.0, penaltyVar);
-    //                 diffExprWithPenalty.Add(diffExpr);
-    //
-    //                 // Now, use the adjusted expression in the constraint
-    //                 cplex.AddGe(diffExprWithPenalty, -1.0); // if diffExpr is greater than -1, penalty is zero
-    //                 cplex.AddLe(diffExprWithPenalty, 1.0); // if diffExpr is less than 1, penalty is zero
-    //             
-    //                 Z4_t_s.AddTerm(1.0, penaltyVar);
-    //             }
-    //         }
-    //     }
-    // }
-    // IIntVar penaltyVar4 = cplex.BoolVar();
-    // cplex.AddEq(penaltyVar4, Z4_t_s);
-    // Zt_s.AddTerm(W[3], penaltyVar4);
-    //
-    //
-    // // 5. Normalize the teacher schedule
-    // ILinearNumExpr Z5_t_s = cplex.LinearNumExpr();
-    // foreach (var t in teachers)
-    // {
-    //     foreach (var s in subjects)
-    //     {
-    //         foreach (var d in days)
-    //         {
-    //             ILinearNumExpr expr = cplex.LinearNumExpr();
-    //             foreach (var p in d.Hours)
-    //             {
-    //                 foreach (var c in classes)
-    //                 {
-    //                     expr.AddTerm(1.0, Xc_t_s_p_d[classes.IndexOf(c), teachers.IndexOf(t), subjects.IndexOf(s), d.Hours.IndexOf(p), days.IndexOf(d)]);
-    //                 }
-    //             }
-    //             double normalized = (1.0 / dayCount) * t.TotalTimeInSchool;
-    //
-    //             IIntVar penaltyVar = cplex.BoolVar();
-    //         
-    //             // Adjusting the expression to use a linear expression
-    //             ILinearNumExpr diffExpr = cplex.LinearNumExpr();
-    //             diffExpr.Add(expr);
-    //             diffExpr.AddTerm(-1.0 * normalized, Yc_t_s[0, teachers.IndexOf(t), subjects.IndexOf(s)]);
-    //
-    //             // Adjusting the constraints to use valid linear expressions
-    //             cplex.AddGe(diffExpr, -1.0); // if diffExpr is greater than -1, penaltyVar should be zero or positive
-    //             cplex.AddLe(diffExpr, penaltyVar); // if diffExpr is less than or equal to penaltyVar, penaltyVar should be 1 (true)
-    //
-    //
-    //             Z5_t_s.AddTerm(1.0, penaltyVar);
-    //         }
-    //     }
-    // }
-    // IIntVar penaltyVar5 = cplex.BoolVar();
-    // cplex.AddEq(penaltyVar5, Z5_t_s);
-    // Zt_s.AddTerm(W[4], penaltyVar5);
-    // // 6. Reducing amount of last periods for a teacher
-    // ILinearNumExpr Z6_t_s = cplex.LinearNumExpr();
-    // foreach (var t in teachers)
-    // {
-    //     foreach (var s in subjects)
-    //     {
-    //         foreach (var d in days)
-    //         {
-    //             foreach (var c in classes)
-    //             {
-    //                 int lastPeriodIndex = d.Hours.Count - 1;
-    //                 Z6_t_s.AddTerm(1.0, Xc_t_s_p_d[classes.IndexOf(c), teachers.IndexOf(t), subjects.IndexOf(s), lastPeriodIndex, days.IndexOf(d)]);
-    //             }
-    //         }
-    //     }
-    // }
-    // IIntVar penaltyVar6 = cplex.BoolVar(); // Create penalty variable
-    // cplex.AddEq(penaltyVar6, Z6_t_s);      // Link penalty variable to Z6_t_s
-    // Zt_s.AddTerm(W[5], penaltyVar6);
-    
     // Add the overall objective function to the model
     cplex.AddMinimize(objectiveExpr);
 
@@ -730,11 +604,5 @@ static class Program
         {
             Console.WriteLine("Conflict refiner could not determine the conflicting constraints.");
         }
-    }
-
-
-    static void Validator(Dictionary<int, Dictionary<string, Dictionary<(int, int), (Subject, Teacher)>>> solution)
-    {
-        // Implement your validation logic here
     }
 }
